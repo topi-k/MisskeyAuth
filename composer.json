@@ -1,4 +1,18 @@
 {
+    "name": "topi-k/misskeyauth",
+    "description": "PHP Library for Misskey Instance",
+    "homepage": "https://github.com/topi-k/MisskeyAuth",
+    "type": "library",
+    "version": "0.0.1",
+    "authors": [
+        {
+            "name": "topi",
+            "email": "hoge@test.com"
+        }
+    ],
+    "require": {
+        "phpunit/phpunit": "*"
+    },
     "autoload": {
         "psr-4": {
             "Topi\\MisskeyAuth\\": "src/"
