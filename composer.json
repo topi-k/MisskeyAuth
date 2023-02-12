@@ -1,19 +1,7 @@
 {
-    "name": "topi/misskey-php",
-    "description": "Composer sample project",
-    "authors": [
-        {
-            "name": "topi",
-            "email": "mntopi01@gmail.com"
+    "autoload": {
+        "psr-4": {
+            "Topi\\MisskeyAuth\\": "src/"
         }
-    ],
-    "require": {
-
-    },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "ssh://user@localhost/var/git/repos/nuuu_muuu.git"
-        }
-    ]
+    }
 }
