@@ -9,10 +9,12 @@ class MiAuthTest extends TestCase
 {
     protected $auth;
 
-    protected function setUp():void {
+    protected function setUp(): void
+    {
         $this->auth = new MiAuth("misskey.io", TOKEN);
+        $this->auth->SetToken("OTLBf75g9HGlUgIxIoqQqAJxqHdpDUGo");
     }
-    
+
     public function testGenerateAuthURI()
     {
         $result = MiAuth::GenerateAuthURI("misskey.io", "TestApp", "http://localhost/callback", []);
@@ -29,7 +31,4 @@ class MiAuthTest extends TestCase
         $this->assertEquals(true, $uuid_check);
     }
 
-    public function testGetAccessToken(){
-
-    }
 }

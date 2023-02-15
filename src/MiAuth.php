@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Topi\MisskeyAuth;
 
 use Exception;
+use CURLFile;
 
 class MiAuth
 {
 
     public $instance = "misskey.io";
+    
+    private $last_result_code = null;
     private $token = null;
 
     public static function GenerateAuthURI($instance, $name, $callback, $permission): string
@@ -64,13 +67,47 @@ class MiAuth
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
         $results = curl_exec($ch);
+        $this->last_result_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
 
         $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        if ($code != 200) throw new Exception("An error has occurred in API. [".$code."] " . curl_error($ch));
-        curl_close($ch);
         $results = json_decode($results);
 
+        if ($code != 200) throw new Exception("An error has occurred in API. [".$code."] " . curl_error($ch));
+        curl_close($ch);
+
         return $results;
+    }
+
+    public function put($endpoint, $directory, $param = []) {
+        if (!isset($this->token)) throw new Exception("Token cannot be empty.");
+        if (!file_exists($directory)) throw new Exception("File not found.");
+        $ch = curl_init();
+
+        $token = ["i" => $this->token];
+        $cfile = new CURLFile($directory,'image/jpeg','test_name');
+        $param = ['file' => $cfile];
+
+        $param = array_merge($param, $token);
+        curl_setopt($ch, CURLOPT_URL, "https://" . $this->instance . "/api/" . $endpoint);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $param);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: multipart/form-data'));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        $results = curl_exec($ch);
+        $this->last_result_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+
+        $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $results = json_decode($results);
+
+        if ($code != 200) throw new Exception("An error has occurred in API. [".$code."] ". curl_error($ch));
+        curl_close($ch);
+
+        return $results;
+    }
+
+    public function GetLastResultCode(){
+        return $this->last_result_code;
     }
 
     public function SetToken($token)
