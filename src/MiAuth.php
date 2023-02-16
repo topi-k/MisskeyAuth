@@ -13,106 +13,72 @@ class MiAuth
     public $instance = "misskey.io";
     
     private $last_result_code = null;
+    private $attempts = 0;
+    private $max_attempts = 5;
     private $token = null;
 
-    public static function GenerateAuthURI($instance, $name, $callback, $permission): string
-    {
-        if (!isset($uuid)) $session = Util::GenerateUUID();
-        $query =  http_build_query(
-            array(
-                "name" => $name,
-                'callback' => $callback,
-                'permission' => $permission
-            ),
-            $encoding_type = "PHP_QUERY_RFC3986"
+    private function makeRequest($method, $instance, $endpoint, $param) {
+        $options = array(
+            CURLOPT_URL => "https://" . $this->instance . "/api/" . $endpoint,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POSTFIELDS => $param,
         );
-        $query = preg_replace('/%5B(\d+?)%5D/', '', $query);
-        return "https://" . $instance . "/miauth/" . $session . "?" . $query;
+
+        switch($method){
+            case "POST":
+                $options .= array(CURLOPT_HTTPHEADER => array('Content-Type: multipart/form-data'));
+                break;
+            case "GET":
+                $options .= array(CURLOPT_HTTPHEADER => array('Content-Type: application/json'));  
+                break;
+        }
+
+        $this->resetLastResultCode();
+        $this->resetAttemptsCount();
+
+        return request($method, $instance, $endpoint, $options)
+    }
+    
+    private function request($method, $instance, $endpoint, $options) {
+        do {
+            $this->connection = curl_init();
+            curl_setopt_array($this->connection, $options);
+            $results = curl_exec($this->connection);
+            $results = json_decode($results);
+        } while ($this->requestAvailable());
     }
 
-    public static function GetAccessToken($instance, $session)
-    {
-        if (!isset($session)) throw new Exception("Session isn't setting up.");
-        $ch = curl_init();
-
-        curl_setopt($ch, CURLOPT_URL, "https://" . $instance . "/api/miauth/" . $session . "/check");
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([]));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/json'));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        $results = curl_exec($ch);
-
-        if (curl_getinfo($ch, CURLINFO_RESPONSE_CODE) != 200) throw new Exception("An error has occurred in API. " . curl_error($ch));
-        curl_close($ch);
-        $results = json_decode($results);
-        if ($results->ok != true) throw new Exception("An error has occurred in API. ");
-        $token = $results->token;
-
-        return $token;
+    private function requestAvailable() {
+        return getHttpCode() > 500 || getHttpCode() == 200;
     }
 
-    public function get($endpoint, $param = [])
-    {
-        if (!isset($this->token)) throw new Exception("Token cannot be empty.");
-        $ch = curl_init();
 
-        $token = ["i" => $this->token];
-        $param = array_merge($param, $token);
-        
-        curl_setopt($ch, CURLOPT_URL, "https://" . $this->instance . "/api/" . $endpoint);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($param));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/json'));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-        $results = curl_exec($ch);
-        $this->last_result_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-
-        $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        $results = json_decode($results);
-
-        if ($code != 200) throw new Exception("An error has occurred in API. [".$code."] " . curl_error($ch));
-        curl_close($ch);
-
-        return $results;
+    private function getHttpCode() {
+        $code = curl_getinfo($this->connection, CURLINFO_RESPONSE_CODE);
+        if ($code) {
+            return $code;
+        } else {
+            return null;
+        }
     }
 
-    public function put($endpoint, $directory, $param = []) {
-        if (!isset($this->token)) throw new Exception("Token cannot be empty.");
-        if (!file_exists($directory)) throw new Exception("File not found.");
-        $ch = curl_init();
-
-        $token = ["i" => $this->token];
-        $cfile = new CURLFile($directory,'image/jpeg','test_name');
-        $param = ['file' => $cfile];
-
-        $param = array_merge($param, $token);
-        curl_setopt($ch, CURLOPT_URL, "https://" . $this->instance . "/api/" . $endpoint);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $param);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: multipart/form-data'));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        $results = curl_exec($ch);
-        $this->last_result_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-
-        $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        $results = json_decode($results);
-
-        if ($code != 200) throw new Exception("An error has occurred in API. [".$code."] ". curl_error($ch));
-        curl_close($ch);
-
-        return $results;
-    }
-
-    public function GetLastResultCode(){
+    public function getLastResultCode(): int {
         return $this->last_result_code;
     }
 
-    public function SetToken($token)
-    {
+    private function resetLastResultCode(): void {
+        $this->last_result_code = null;
+        return;
+    }
+
+    private function resetAttemptsCount(): void {
+        $this->attempts = 0;
+        return;
+    }
+
+    public function setUserToken($token): void {
         $this->token = $token;
-        return 0;
+        return;
     }
 }
