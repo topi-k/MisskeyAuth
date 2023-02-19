@@ -35,7 +35,7 @@ class MiAuth
      * @return object
      */
 
-    public function get(string $endpoint, array $param = []) : object
+    public function get(string $endpoint, array $param = []): object
     {
         if ($this->isSetToken()) {
             $token = ["i" => $this->token];
@@ -56,7 +56,7 @@ class MiAuth
      * @return object
      */
 
-    public function post(string $endpoint, array $param = [], string $file = null) : object
+    public function post(string $endpoint, array $param = [], string $file = null): object
     {
         if ($this->isSetToken()) {
             $token = ["i" => $this->token];
@@ -102,7 +102,7 @@ class MiAuth
      * 
      * @return string
      */
-    public function getAccessToken():string
+    public function getAccessToken(): string
     {
         if (!$this->isSetInstance()) throw new MisskeyAuthException("Instance cannot be empty.");
         if (!$this->isSetUUID()) throw new MisskeyAuthException("UUID cannot be empty.");
@@ -125,7 +125,7 @@ class MiAuth
      * 
      * @return object
      */
-    private function makeRequest(string $method, string $endpoint, array $param=[], string $file = null) : object
+    private function makeRequest(string $method, string $endpoint, array $param = [], string $file = null): object
     {
         if (!$this->isSetInstance()) throw new MisskeyAuthException("Instance cannot be empty.");
         $options = array(
@@ -134,22 +134,16 @@ class MiAuth
             CURLOPT_TIMEOUT_MS => $this->timeout_ms
         );
 
-        switch ($method) {
-            case "POST":
-                if ($file) {
-                    if (!is_readable($file)) throw new MisskeyAuthException("File is not readable.");
-                    $file = new CURLFile($file, 'image/jpeg', 'file');
-                    $param += ['file' => $file];
-                    $options += [CURLOPT_HTTPHEADER => ['Content-Type: multipart/form-data']];
-                } else {
-                    $options += [CURLOPT_HTTPHEADER => ['Content-Type: application/json']];
-                }
-                break;
-            case "GET":
-                $options += [CURLOPT_HTTPHEADER => ['Content-Type: application/json']];
-                break;
+        if ($method == "POST" && $file) {
+            if (!is_readable($file)) throw new MisskeyAuthException("File is not readable.");
+            $file = new CURLFile($file, 'image/jpeg', 'file');
+            $param += ['file' => $file];
+            $options += [CURLOPT_HTTPHEADER => ['Content-Type: multipart/form-data']];
+            $options += [CURLOPT_POSTFIELDS => $param];
+        } else {
+            $options += [CURLOPT_HTTPHEADER => ['Content-Type: application/json']];
+            $options += [CURLOPT_POSTFIELDS => json_encode($param)];
         }
-        $options += [CURLOPT_POSTFIELDS => $param];
 
         $this->resetLastResultCode();
         $this->resetAttemptsCount();
@@ -165,7 +159,7 @@ class MiAuth
      * 
      * @return object
      */
-    private function request(array $options) : object
+    private function request(array $options): object
     {
         if (!$this->isSetInstance()) throw new MisskeyAuthException("Instance cannot be empty.");
         do {
@@ -192,7 +186,7 @@ class MiAuth
      * 
      * @return bool
      */
-    private function requestAvailable() :bool
+    private function requestAvailable(): bool
     {
         return $this->attempts < $this->max_attempts && $this->getLastResultCode() >= 500;
     }
@@ -280,7 +274,7 @@ class MiAuth
     {
         return isset($this->token);
     }
-    
+
     /**
      * Function to determine if an instance is set.
      * 
