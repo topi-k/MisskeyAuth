@@ -98,7 +98,7 @@ class MiAuth
 
     /**
      * Function to issue an access token from a UUID.
-     * Note: Use the SetUUID function to set the UUID before use.
+     * Note: Use the SetUUUID function to set the UUID before use.
      * 
      * @return string
      */
