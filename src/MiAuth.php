@@ -24,40 +24,65 @@ class MiAuth
     private $last_result_code = null;
     private $connection = null;
 
-    public function get($endpoint, $param = [])
+
+    /**
+     * Functions that use the API without parameters.
+     * Note: For sending an API key, the function name is "GET" but it is sent as POST.
+     * 
+     * @param string $endpoint
+     * @param array  $param  (optional)
+     * 
+     * @return object
+     */
+
+    public function get(string $endpoint, array $param = []) : object
     {
         if ($this->isSetToken()) {
             $token = ["i" => $this->token];
-            $param = array_merge($token,$param);
+            $param = array_merge($token, $param);
         }
         $results = $this->makeRequest("GET", $endpoint, $param);
         return $results;
     }
 
-    public function post($endpoint, $param = [], $file = null)
+    /**
+     * Functions that use the API with parameters.
+     * Note: To send a file, assign a directory to $file.
+     * 
+     * @param string $endpoint
+     * @param array  $param (optional)
+     * @param string $file  (optional)
+     * 
+     * @return object
+     */
+
+    public function post(string $endpoint, array $param = [], string $file = null) : object
     {
         if ($this->isSetToken()) {
             $token = ["i" => $this->token];
-            $param = array_merge($token,$param);
+            $param = array_merge($token, $param);
         }
 
-        $results = $this->makeRequest("POST", $endpoint, $param, isset($file));
+        if ($file) {
+            if (!file_exists($file)) throw new MisskeyAuthException("File not found.");
+        }
+
+        $results = $this->makeRequest("POST", $endpoint, $param, $file);
         return $results;
     }
 
-    public function UploadtoDrive($param = [], $file)
-    {
-        if ($this->isSetToken()) {
-            $token = ["i" => $this->token];
-            $param = array_merge($token,$param);
-        }
-        if (!file_exists($file)) throw new MisskeyAuthException("File not found.");
+    /**
+     * Function to obtain the URL to be used during authentication.
+     * The UUID is automatically generated.
+     * 
+     * @param string $name
+     * @param string $callback
+     * @param array  $permission
+     * 
+     * @return string
+     */
 
-        $results = $this->makeRequest("POST", "drive/files/create", $param, $file);
-        return $results;
-    }
-
-    public function generateAuthURI($name, $callback, $permission): string
+    public function generateAuthURI(string $name, string $callback, array $permission): string
     {
         if (!$this->isSetInstance()) throw new MisskeyAuthException("Instance cannot be empty.");
         $query =  http_build_query(
@@ -71,7 +96,13 @@ class MiAuth
         return "https://" . $this->instance . "/miauth/" . Util::GenerateUUID() . "?" . $query;
     }
 
-    public function getAccessToken()
+    /**
+     * Function to issue an access token from a UUID.
+     * Note: Use the SetUUUID function to set the UUID before use.
+     * 
+     * @return string
+     */
+    public function getAccessToken():string
     {
         if (!$this->isSetInstance()) throw new MisskeyAuthException("Instance cannot be empty.");
         if (!$this->isSetUUID()) throw new MisskeyAuthException("UUID cannot be empty.");
@@ -83,7 +114,18 @@ class MiAuth
         }
     }
 
-    private function makeRequest($method, $endpoint, $param, $file = null)
+    /**
+     * Function to generate a request, used from the Post/Get function to generate CURL parameters.
+     * The generated parameters are passed to the request function.
+     * 
+     * @param string $method
+     * @param string $endpoint
+     * @param array  $param (optional)
+     * @param string $file  (optional)
+     * 
+     * @return object
+     */
+    private function makeRequest(string $method, string $endpoint, array $param=[], string $file = null) : object
     {
         if (!$this->isSetInstance()) throw new MisskeyAuthException("Instance cannot be empty.");
         $options = array(
@@ -91,12 +133,12 @@ class MiAuth
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT_MS => $this->timeout_ms
         );
-        
+
         switch ($method) {
             case "POST":
                 if ($file) {
                     if (!is_readable($file)) throw new MisskeyAuthException("File is not readable.");
-                    $file = new CURLFile($file,'image/jpeg','file');
+                    $file = new CURLFile($file, 'image/jpeg', 'file');
                     $param += ['file' => $file];
                     $options += [CURLOPT_HTTPHEADER => ['Content-Type: multipart/form-data']];
                 } else {
@@ -115,7 +157,15 @@ class MiAuth
         return $this->request($options);
     }
 
-    private function request($options)
+    /**
+     * Function to issue an HTTP request based on the parameters passed.
+     * If HTTP code 500 or more is returned, the request is automatically retried within max_attempts.
+     * 
+     * @param array $option
+     * 
+     * @return object
+     */
+    private function request(array $options) : object
     {
         if (!$this->isSetInstance()) throw new MisskeyAuthException("Instance cannot be empty.");
         do {
@@ -136,62 +186,116 @@ class MiAuth
         return $results;
     }
 
-    private function requestAvailable()
+    /**
+     * Function used in the Request function to determine if a request can be made.
+     * (Less than or equal to the maximum number of attempts and the last request returned over 500.)
+     * 
+     * @return bool
+     */
+    private function requestAvailable() :bool
     {
         return $this->attempts < $this->max_attempts && $this->getLastResultCode() >= 500;
     }
 
+    /**
+     * Function to return the HTTP code obtained from the last CURL.
+     * 
+     * @return int
+     */
     public function getLastResultCode(): int
     {
         return $this->last_result_code;
     }
 
+    /**
+     * Function to erase the last stored HTTP code.
+     */
     private function resetLastResultCode(): void
     {
         $this->last_result_code = null;
         return;
     }
 
+    /**
+     * Function to reset the number of attempts.
+     */
     private function resetAttemptsCount(): void
     {
         $this->attempts = 0;
         return;
     }
 
-    public function setUserToken($token): void
+    /**
+     * Function to set a token.
+     * 
+     * @param string $token
+     */
+    public function setUserToken(string $token): void
     {
         $this->token = $token;
         return;
     }
 
-    public function setInstance($instance): void
+    /**
+     * Function to set the instance to make the connection.
+     * (By default, "misskey.io" is set.)
+     * 
+     * @param string $instance
+     */
+    public function setInstance(string $instance): void
     {
         $this->instance = $instance;
         return;
     }
 
-    public function setTimeout($timeout_ms): void
+    /**
+     * Sets the maximum waiting time for CURL connections. Set in milliseconds.
+     * (If it times out, a "MisskeyAuthException" will be returned without retry.)
+     * 
+     * @param int $timeout_ms
+     */
+    public function setTimeout(int $timeout_ms): void
     {
         $this->timeout_ms = $timeout_ms;
         return;
     }
 
-    public function setUUID($uuid): void
+    /**
+     * Set the UUID required to obtain a token. If a token has been obtained, no setting is required.
+     * 
+     * @param string $uuid
+     */
+    public function setUUID(string $uuid): void
     {
         $this->uuid = $uuid;
         return;
     }
 
+    /**
+     * Function to determine if a token has been set.
+     * 
+     * @return bool
+     */
     private function isSetToken(): bool
     {
         return isset($this->token);
     }
-
+    
+    /**
+     * Function to determine if an instance is set.
+     * 
+     * @return bool
+     */
     private function isSetInstance(): bool
     {
         return isset($this->instance);
     }
 
+    /**
+     * Function to determine if a UUID is set.
+     * 
+     * @return bool
+     */
     private function isSetUUID(): bool
     {
         return isset($this->uuid);
