@@ -3,13 +3,24 @@
     "description": "PHP Library for Misskey Instance",
     "homepage": "https://github.com/topi-k/MisskeyAuth",
     "type": "library",
+    "license": "MIT",
     "version": "0.0.1",
     "authors": [
         {
             "name": "topi",
-            "email": "hoge@test.com"
+            "email": "mntopi01@gmail.com",
+            "homepage": "https://topi.tokyo",
+            "role": "Developer"
         }
     ],
+    "support": {
+        "source": "https://github.com/topi-k/MisskeyAuth",
+        "issues": "https://github.com/topi-k/MisskeyAuth/issues"
+    },
+    "require": {
+        "php": "^8.0 || ^8.1",
+        "ext-curl": "*"
+    },
     "require-dev": {
         "phpunit/phpunit": "*"
     },
