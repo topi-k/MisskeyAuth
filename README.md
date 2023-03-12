@@ -16,6 +16,7 @@ upper than PHP 8.0
 use Topi\MisskeyAuth\MiAuth;
 
 $mi = new MiAuth;
+$mi->setInstance("misskey.example.com");
 echo $mi->GenerateAuthURI("TestApp", "https://localhost/callback", ["write:notes"]);
 ```
 #### Get user token
