@@ -110,7 +110,7 @@ class MiAuth
         if (isset($results->token)) {
             return $results->token;
         } else {
-            return null;
+            return "";
         }
     }
 
